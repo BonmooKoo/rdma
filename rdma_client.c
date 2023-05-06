@@ -11,7 +11,7 @@ int main(){
         printf("No IB device\n");
         exit(1);
     }
-    context=ibv_open_device_by_ibdev_name("mlx5_0");
+    context=ibv_open_device(device);
     if(!context){
         printf("No Context device\n");
         exit(1);
@@ -82,7 +82,7 @@ int main(){
     struct ibv_mr* recv_mr = ibv_reg_mr(pd, recv_buf, BUF_SIZE, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
 
     uintptr_t remote_addr=(uintptr_t) recv_buf;
-    remote_key=recv_mr->rkey;
+    //remote_key=recv_mr->rkey;
 
     //버퍼에 데이터 쓰기
     sprintf(send_buf,"Hello RDMA! From Konduck1\n");
@@ -94,7 +94,7 @@ int main(){
     // sge / send_wr 설정하기
     sge.addr = (uintptr_t)send_buf; //sge의 주소 설정하기
     sge.length = BUF_SIZE;
-    sge.lkey = mr->lkey; //memory region의 lkey 설정하기
+    sge.lkey = mem_region->lkey; //memory region의 lkey 설정하기
     send_wr.wr_id = (uint64_t)(uintptr_t)sge.addr;
     send_wr.opcode = IBV_WR_SEND_WITH_IMM;
     send_wr.sg_list = &sge;
@@ -107,7 +107,7 @@ int main(){
 
     struct ibv_wc wc;//Work Complete
     while(1){
-        int net = ibv_poll_cq(cq,1,&wc);
+        int net = ibv_poll_cq(comp_que,1,&wc);
         if(net<0){
             printf("Fail to Poll CQ\n");
             exit(1);
@@ -126,7 +126,7 @@ int main(){
     ibv_dealloc_pd(pd);
     ibv_close_device(context);
     ibv_free_device_list(device_list);
-    free(msg_buf);
+    free(msg);
 
     return 0;
 }

@@ -1,4 +1,5 @@
 #include <infiniband/verbs.h>  // RDMA 통신에 필요한 헤더 파일
+#include <arpa/inet.h>
 #include <cstdlib>             // exit() 함수를 사용하기 위해 필요한 헤더 파일
 #include <cstdio>
 #ifndef __HEADER
