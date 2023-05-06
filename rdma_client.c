@@ -117,7 +117,8 @@ int main(){
         }
         if(wc.status!=IBV_WC_SUCCESS){
             printf("Failed for wr_id %d\n",wc.wr_id);
-            exit(1);
+		printf("%d\n",wc.status);
+		exit(1);
         }
     }
 
