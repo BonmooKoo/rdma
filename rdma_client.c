@@ -29,7 +29,8 @@ int main(){
         exit(1);
     }
 //Complete Queue 생성
-    comp_que=ibv_create_cq(context,1,NULL,NULL,0);
+    comp_que=ibv_create_cq(context,10,NULL,NULL,0);
+    //                     contect, cqe cq_context , complete channel , comp_vector
     if(!comp_que){
         printf("No comp_que\n");
         exit(1);
@@ -37,11 +38,11 @@ int main(){
 
     struct ibv_qp_init_attr qp_init_attr={};
     memset(&qp_init_attr,0,sizeof(qp_init_attr));
+    qp_init_attr.qp_type=IBV_QPT_RC; // queue pair type ; reliable connection
     qp_init_attr.send_cq=comp_que;
     qp_init_attr.recv_cq=comp_que;
-    qp_init_attr.qp_type=IBV_QPT_RC; // queue pair type ; reliable connection
-    qp_init_attr.cap.max_send_wr=1; // Work Request
-    qp_init_attr.cap.max_recv_wr=10;
+    qp_init_attr.cap.max_send_wr=32; // Work Request
+    qp_init_attr.cap.max_recv_wr=32;
     qp_init_attr.cap.max_send_sge=1; //Scatter gather entry
     qp_init_attr.cap.max_recv_sge=1;
 
@@ -53,8 +54,10 @@ int main(){
         exit(1);
     }
 // QP State 변경 
-// INIT > RTR / RTS
-// 수신만하는 쪽은 RTR도 ok
+
+    // INIT > RTR / RTS
+    // 수신만하는 쪽은 RTR도 ok
+
     struct ibv_qp_attr conn_attr={};
     memset(&conn_attr,0,sizeof(conn_attr));
     conn_attr.qp_state = IBV_QPS_INIT;
@@ -66,7 +69,38 @@ int main(){
         fprintf(stderr, "Failed to modify QP state to INIT: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
     }//conn_attr로 설정한 내용을 qp에 저장
-    printf("QP %d : RTS state\n", qp->qp_num);
+    printf("QP %d : INIT state\n", qp->qp_num);
+
+    memset(&conn_attr,0,sizeof(conn_attr));
+    conn_attr.qp_state = IBV_QPS_RTR;
+    conn_attr.path_mtu=IBV_MTU_4096;
+    conn_attr.pkey_index = 0;
+    conn_attr.dest_qp_num=  //통신 상대의 QP 번호
+    
+    conn_attr.qp_access_flags = IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE;
+    conn_attr.ah_attr.is_global=0;
+    conn_attr.ah_attr.dlid= ;//통신상대의 LID
+    conn_attr.ah_attr.sl=0;
+    conn_attr.ah_attr.src_path_bits=0;
+    conn_attr.ah_attr.port_num=1;
+    
+    if (ibv_modify_qp(qp, &conn_attr, IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS)) {
+        fprintf(stderr, "Failed to modify QP state to INIT: %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }//conn_attr로 설정한 내용을 qp에 저장
+    printf("QP %d : RTR state\n", qp->qp_num);
+
+    struct ibv_qp_attr rts_attr = {
+    .qp_state           = IBV_QPS_RTS,
+    .timeout            = 0,
+    .retry_cnt          = 7,
+    .rnr_retry          = 7,
+    .sq_psn             = 0,  //0에서 2^24 - 1 까지의 자유값,
+    .max_rd_atomic      = 0,
+    };
+
+    ret = ibv_modify_qp(qp, &rts_attr,IBV_QP_STATE|IBV_QP_TIMEOUT|IBV_QP_RETRY_CNT|IBV_QP_RNR_RETRY|IBV_QP_SQ_PSN|IBV_QP_MAX_QP_RD_ATOMIC);
+
 /////////////////////////////////////////////////
 
 //송신버퍼 / 수신 버퍼 생성하고 QP에 등록하기
@@ -117,8 +151,8 @@ int main(){
         }
         if(wc.status!=IBV_WC_SUCCESS){
             printf("Failed for wr_id %d\n",wc.wr_id);
-		printf("%d\n",wc.status);
-		exit(1);
+		    printf("%d\n",wc.status);
+		    exit(1);
         }
     }
 

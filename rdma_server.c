@@ -1,10 +1,6 @@
 #include "rdma.h"
 
 int main(){
-    uint32_t remote_key;
-    char* msg;
-    int rc;
-
     device_list=ibv_get_device_list(NULL);
     if(!device_list){
         printf("No IB device\n");
@@ -15,7 +11,7 @@ int main(){
         printf("No IB device\n");
         exit(1);
     }
-    context=ibv_open_device_by_ibdev_name("mlx5_0");
+    context=ibv_open_device(device);
     if(!context){
         printf("No Context device\n");
         exit(1);
@@ -33,7 +29,8 @@ int main(){
         exit(1);
     }
 //Complete Queue 생성
-    comp_que=ibv_create_cq(context,1,NULL,NULL,0);
+    comp_que=ibv_create_cq(context,10,NULL,NULL,0);
+    //                     contect, cqe cq_context , complete channel , comp_vector
     if(!comp_que){
         printf("No comp_que\n");
         exit(1);
@@ -41,11 +38,11 @@ int main(){
 
     struct ibv_qp_init_attr qp_init_attr={};
     memset(&qp_init_attr,0,sizeof(qp_init_attr));
+    qp_init_attr.qp_type=IBV_QPT_RC; // queue pair type ; reliable connection
     qp_init_attr.send_cq=comp_que;
     qp_init_attr.recv_cq=comp_que;
-    qp_init_attr.qp_type=IBV_QPT_RC; // queue pair type ; reliable connection
-    qp_init_attr.cap.max_send_wr=1; // Work Request
-    qp_init_attr.cap.max_recv_wr=10;
+    qp_init_attr.cap.max_send_wr=32; // Work Request
+    qp_init_attr.cap.max_recv_wr=32;
     qp_init_attr.cap.max_send_sge=1; //Scatter gather entry
     qp_init_attr.cap.max_recv_sge=1;
 
