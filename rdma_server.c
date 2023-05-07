@@ -75,11 +75,13 @@ int main(){
     conn_attr.qp_state = IBV_QPS_RTR;
     conn_attr.path_mtu=IBV_MTU_4096;
     conn_attr.pkey_index = 0;
-    conn_attr.dest_qp_num=  //통신 상대의 QP 번호
+    //conn_attr.dest_qp_num=  //통신 상대의 QP 번호
+    //conn_attr.rq_psn        //통신 상대 SQ의 PS
     
     conn_attr.qp_access_flags = IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE;
     conn_attr.ah_attr.is_global=0;
-    conn_attr.ah_attr.dlid= ;//통신상대의 LID
+    //conn_attr.ah_attr.dlid=1;//통신상대의 LID konduck1 : 1 kongoose :2
+    conn_attr.ah_attr.dlid=2;
     conn_attr.ah_attr.sl=0;
     conn_attr.ah_attr.src_path_bits=0;
     conn_attr.ah_attr.port_num=1;
