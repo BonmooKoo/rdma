@@ -121,41 +121,46 @@ int main(){
     //버퍼에 데이터 쓰기
     sprintf(send_buf,"Hello RDMA! From Konduck1\n");
 
-    struct ibv_send_wr send_wr,*fail_send_wr;
     struct ibv_sge sge;
     memset(&sge, 0, sizeof(sge));
-    memset(&send_wr,0,sizeof(send_wr));
-    // sge / send_wr 설정하기
-    sge.addr = (uintptr_t)send_buf; //sge의 주소 설정하기
+    sge.addr   =(uintptr_t)send_buf;
     sge.length = BUF_SIZE;
-    sge.lkey = mem_region->lkey; //memory region의 lkey 설정하기
-    send_wr.wr_id = (uint64_t)(uintptr_t)sge.addr;
-    send_wr.opcode = IBV_WR_SEND_WITH_IMM;
-    send_wr.sg_list = &sge;
-    send_wr.num_sge = 1;
-    send_wr.imm_data = htonl(123456789); //임의의 32비트 값
-    ibv_post_send(qp,&send_wr,&fail_send_wr); //send work request 전송
+    sge.lkey   = mr->lkey;
+    
+    struct ibv_recv_wr recv_wr;
+    memset(&recv_wr,0,sizeof(recv_wr));
+    recv_wr.wr_id = (uint64_t)(uintptr_t)sge.addr;
+    recv_wr.sg_list = &sge;
+    recv_wr.num_sge = 1;
+    recv_wr.imm_data = htonl(123456789); //임의의 32비트 값
+    ibv_post_recv(qp,&recv_wr,&fail_recv_wr); //recv work request 전송
+
+    struct ibv_recv_wr *bad_wr;
+
+    ret = ibv_post_recv(qp, &recv_wr, &bad_wr);
 
 
     printf("Success : Send request posted\n");
 
     struct ibv_wc wc;//Work Complete
-    while(1){
-        int net = ibv_poll_cq(comp_que,1,&wc);
-        if(net<0){
-            printf("Fail to Poll CQ\n");
-            exit(1);
-        }
-        if(net=0){
-            continue;
-        }
-        if(wc.status!=IBV_WC_SUCCESS){
-            printf("Failed for wr_id %d\n",wc.wr_id);
-		    printf("%d\n",wc.status);
-		    exit(1);
-        }
+retry:
+    int net = ibv_poll_cq(comp_que,1,&wc);
+    if(net<0){
+        printf("Fail to Poll CQ\n");
+        exit(1);
+    }
+    if(net=0){
+        goto retry;
+    }
+    if(wc.status!=IBV_WC_SUCCESS){
+        printf("Failed for wr_id %d\n",wc.wr_id);
+        printf("%d\n",wc.status);
+        exit(1);
     }
 
+    if(wc.opcode==IBV_WC_RECV){
+        printf("Success: wr_id=%016" PRIx64 " byte_len=%u, imm_data=%x\n", wc.wr_id, wc.byte_len, wc.imm_data);
+    }
     ibv_destroy_qp(qp);
     ibv_destroy_cq(comp_que);
     ibv_dealloc_pd(pd);

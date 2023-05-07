@@ -53,7 +53,11 @@ int main(){
         printf("No queue pair\n");
         exit(1);
     }
-     // QP 상태 변경
+// QP State 변경 
+
+    // INIT > RTR / RTS
+    // 수신만하는 쪽은 RTR도 ok
+
     struct ibv_qp_attr conn_attr={};
     memset(&conn_attr,0,sizeof(conn_attr));
     conn_attr.qp_state = IBV_QPS_INIT;
@@ -64,59 +68,105 @@ int main(){
     if (ibv_modify_qp(qp, &conn_attr, IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS)) {
         fprintf(stderr, "Failed to modify QP state to INIT: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
-    }
-    // QP 연결 대기
-    memset(&conn_attr, 0, sizeof(conn_attr));
+    }//conn_attr로 설정한 내용을 qp에 저장
+    printf("QP %d : INIT state\n", qp->qp_num);
+
+    memset(&conn_attr,0,sizeof(conn_attr));
     conn_attr.qp_state = IBV_QPS_RTR;
-    conn_attr.path_mtu = IBV_MTU_256;
-    conn_attr.dest_qp_num = remote_qpn;
-    conn_attr.rq_psn = remote_psn;
-    conn_attr.max_dest_rd_atomic = 1;
-    conn_attr.min_rnr_timer = 12;
-    conn_attr.ah_attr.is_global = 0;
-    conn_attr.ah_attr.dlid = remote_lid;
-    conn_attr.ah_attr.sl = 0;
-    conn_attr.ah_attr.src_path_bits = 0;
-    conn_attr.ah_attr.port_num = 1;
-    if (ibv_modify_qp(qp, &conn_attr, IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU |
-                    IBV_QP_DEST_QPN | IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC |
-                    IBV_QP_MIN_RNR_TIMER)) {
-        fprintf(stderr, "Failed to modify QP state to RTR: %s\n", strerror(errno));
+    conn_attr.path_mtu=IBV_MTU_4096;
+    conn_attr.pkey_index = 0;
+    conn_attr.dest_qp_num=  //통신 상대의 QP 번호
+    
+    conn_attr.qp_access_flags = IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE;
+    conn_attr.ah_attr.is_global=0;
+    conn_attr.ah_attr.dlid= ;//통신상대의 LID
+    conn_attr.ah_attr.sl=0;
+    conn_attr.ah_attr.src_path_bits=0;
+    conn_attr.ah_attr.port_num=1;
+    
+    if (ibv_modify_qp(qp, &conn_attr, IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS)) {
+        fprintf(stderr, "Failed to modify QP state to INIT: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
+    }//conn_attr로 설정한 내용을 qp에 저장
+    printf("QP %d : RTR state\n", qp->qp_num);
+
+    struct ibv_qp_attr rts_attr = {
+    .qp_state           = IBV_QPS_RTS,
+    .timeout            = 0,
+    .retry_cnt          = 7,
+    .rnr_retry          = 7,
+    .sq_psn             = 0,  //0에서 2^24 - 1 까지의 자유값,
+    .max_rd_atomic      = 0,
+    };
+
+    ret = ibv_modify_qp(qp, &rts_attr,IBV_QP_STATE|IBV_QP_TIMEOUT|IBV_QP_RETRY_CNT|IBV_QP_RNR_RETRY|IBV_QP_SQ_PSN|IBV_QP_MAX_QP_RD_ATOMIC);
+
+/////////////////////////////////////////////////
+
+//송신버퍼 / 수신 버퍼 생성하고 QP에 등록하기
+//두개의 Queue pair을 통신 가능한 상태로 설정하기
+
+    char* send_buf = (char *) malloc(BUF_SIZE);
+    char* recv_buf = (char *) malloc(BUF_SIZE);
+    memset(send_buf, 0, BUF_SIZE);
+    memset(recv_buf, 0, BUF_SIZE);
+
+    // 송신, 수신 버퍼 메모리 등록
+    struct ibv_mr* send_mr = ibv_reg_mr(pd, send_buf, BUF_SIZE, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
+    struct ibv_mr* recv_mr = ibv_reg_mr(pd, recv_buf, BUF_SIZE, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
+
+    uintptr_t remote_addr=(uintptr_t) recv_buf;
+    //remote_key=recv_mr->rkey;
+
+    //버퍼에 데이터 쓰기
+    sprintf(send_buf,"Hello RDMA! From Konduck1\n");
+
+    struct ibv_sge sge;
+    memset(&sge, 0, sizeof(sge));
+    sge.addr   =(uintptr_t)send_buf;
+    sge.length = BUF_SIZE;
+    sge.lkey   = mr->lkey;
+    
+    struct ibv_send_wr send_wr;
+    memset(&send_wr,0,sizeof(send_wr));
+    send_wr.wr_id = (uint64_t)(uintptr_t)sge.addr;
+    send_wr.opcode = IBV_WR_SEND_WITH_IMM;
+    send_wr.sg_list = &sge;
+    send_wr.num_sge = 1;
+    send_wr.imm_data = htonl(123456789); //임의의 32비트 값
+    ibv_post_send(qp,&send_wr,&fail_send_wr); //send work request 전송
+
+    struct ibv_send_wr *bad_wr;
+
+    ret = ibv_post_send(qp, &send_wr, &bad_wr);
+
+    printf("Success : Send request posted\n");
+
+    struct ibv_wc wc;//Work Complete
+retry:
+    int net = ibv_poll_cq(comp_que,1,&wc);
+    if(net<0){
+        printf("Fail to Poll CQ\n");
+        exit(1);
     }
-    //QP 연결 완료
-    memset(&conn_attr, 0, sizeof(conn_attr));
-    conn_attr.qp_state = IBV_QPS_RTS;
-    conn_attr.sq_psn = local_psn;
-    conn_attr.timeout = 14;
-    conn_attr.retry_cnt = 7;
-    conn_attr.rnr_retry = 7;
-    conn_attr.max_rd_atomic = 1;
-    if (ibv_modify_qp(qp, &conn_attr, IBV_QP_STATE | IBV_QP_SQ_PSN | IBV_QP_TIMEOUT |
-                    IBV_QP_RETRY_CNT | IBV_QP_RNR_RETRY | IBV_QP_MAX_QP_RD_ATOMIC)) {
-        fprintf(stderr, "Failed to modify QP state to RTS: %s\n", strerror(errno));
-        exit(EXIT_FAILURE);
+    if(net=0){
+        goto retry;
+    }
+    if(wc.status!=IBV_WC_SUCCESS){
+        printf("Failed for wr_id %d\n",wc.wr_id);
+        printf("%d\n",wc.status);
+        exit(1);
     }
 
-        // 클라이언트가 보낸 문자열 받기
-    if (ibv_post_recv(qp, &r_wr, &bad_r_wr)) {
-        fprintf(stderr, "Failed to post receive: %s\n", strerror(errno));
-        exit(EXIT_FAILURE);
+    if(wc.opcode==IBV_WC_RECV){
+        printf("Success: wr_id=%016" PRIx64 " byte_len=%u, imm_data=%x\n", wc.wr_id, wc.byte_len, wc.imm_data);
     }
+    ibv_destroy_qp(qp);
+    ibv_destroy_cq(comp_que);
+    ibv_dealloc_pd(pd);
+    ibv_close_device(context);
+    ibv_free_device_list(device_list);
+    free(msg);
 
-    // 버퍼에서 문자열 읽기
-    if (ibv_poll_cq(cq, 1, &wc) < 1) {
-        fprintf(stderr, "Failed to poll receive CQ: %s\n", strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-
-    if (wc.status != IBV_WC_SUCCESS) {
-        fprintf(stderr, "Failed to receive message: %s\n", ibv_wc_status_str(wc.status));
-        exit(EXIT_FAILURE);
-    }
-
-    // 받은 문자열 출력하기
-    printf("Received message from client: %s\n", recv_buf);
-
+    return 0;
 }
-
