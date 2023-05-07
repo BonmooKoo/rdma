@@ -98,11 +98,10 @@ int main(){
     .timeout            = 0,
     .retry_cnt          = 7,
     .rnr_retry          = 7,
-    .sq_psn             = 0,  //0에서 2^24 - 1 까지의 자유값,
     .max_rd_atomic      = 0,
     };
 
-    ret = ibv_modify_qp(qp, &rts_attr,IBV_QP_STATE|IBV_QP_TIMEOUT|IBV_QP_RETRY_CNT|IBV_QP_RNR_RETRY|IBV_QP_SQ_PSN|IBV_QP_MAX_QP_RD_ATOMIC);
+    int ret = ibv_modify_qp(qp, &rts_attr,IBV_QP_STATE|IBV_QP_TIMEOUT|IBV_QP_RETRY_CNT|IBV_QP_RNR_RETRY|IBV_QP_SQ_PSN|IBV_QP_MAX_QP_RD_ATOMIC);
 
 /////////////////////////////////////////////////
 
@@ -128,7 +127,7 @@ int main(){
     memset(&sge, 0, sizeof(sge));
     sge.addr   =(uintptr_t)send_buf;
     sge.length = BUF_SIZE;
-    sge.lkey   = mr->lkey;
+    sge.lkey   = mem_region->lkey;
     
     struct ibv_send_wr send_wr;
     memset(&send_wr,0,sizeof(send_wr));
@@ -136,8 +135,6 @@ int main(){
     send_wr.opcode = IBV_WR_SEND_WITH_IMM;
     send_wr.sg_list = &sge;
     send_wr.num_sge = 1;
-    send_wr.imm_data = htonl(123456789); //임의의 32비트 값
-    ibv_post_send(qp,&send_wr,&fail_send_wr); //send work request 전송
 
     struct ibv_send_wr *bad_wr;
 

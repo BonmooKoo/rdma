@@ -127,20 +127,16 @@ int main(){
     memset(&sge, 0, sizeof(sge));
     sge.addr   =(uintptr_t)send_buf;
     sge.length = BUF_SIZE;
-    sge.lkey   = mr->lkey;
+    sge.lkey   = mem_region->lkey;
     
     struct ibv_recv_wr recv_wr;
     memset(&recv_wr,0,sizeof(recv_wr));
     recv_wr.wr_id = (uint64_t)(uintptr_t)sge.addr;
     recv_wr.sg_list = &sge;
     recv_wr.num_sge = 1;
-    recv_wr.imm_data = htonl(123456789); //임의의 32비트 값
-    ibv_post_recv(qp,&recv_wr,&fail_recv_wr); //recv work request 전송
 
     struct ibv_recv_wr *bad_wr;
-
     ret = ibv_post_recv(qp, &recv_wr, &bad_wr);
-
 
     printf("Success : Send request posted\n");
 
@@ -161,7 +157,7 @@ retry:
     }
 
     if(wc.opcode==IBV_WC_RECV){
-        printf("Success: wr_id=%016" PRIx64 " byte_len=%u, imm_data=%x\n", wc.wr_id, wc.byte_len, wc.imm_data);
+        printf("Success: wr_id=%016 byte_len=%u, imm_data=%x\n", wc.wr_id, wc.byte_len, wc.imm_data);
     }
     ibv_destroy_qp(qp);
     ibv_destroy_cq(comp_que);
