@@ -80,8 +80,8 @@ int main(){
     
     conn_attr.qp_access_flags = IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE;
     conn_attr.ah_attr.is_global=0;
-    //conn_attr.ah_attr.dlid=1;//통신상대의 LID konduck1 : 1 kongoose :2
-    conn_attr.ah_attr.dlid=2;
+    conn_attr.ah_attr.dlid=1;//통신상대의 LID konduck1 : 1 kongoose :2
+    //conn_attr.ah_attr.dlid=2;
     conn_attr.ah_attr.sl=0;
     conn_attr.ah_attr.src_path_bits=0;
     conn_attr.ah_attr.port_num=1;
@@ -97,11 +97,9 @@ int main(){
     .timeout            = 0,
     .retry_cnt          = 7,
     .rnr_retry          = 7,
-    .sq_psn             = 0,  //0에서 2^24 - 1 까지의 자유값,
-    .max_rd_atomic      = 0,
     };
 
-    ret = ibv_modify_qp(qp, &rts_attr,IBV_QP_STATE|IBV_QP_TIMEOUT|IBV_QP_RETRY_CNT|IBV_QP_RNR_RETRY|IBV_QP_SQ_PSN|IBV_QP_MAX_QP_RD_ATOMIC);
+    int ret = ibv_modify_qp(qp, &rts_attr,IBV_QP_STATE|IBV_QP_TIMEOUT|IBV_QP_RETRY_CNT|IBV_QP_RNR_RETRY|IBV_QP_SQ_PSN|IBV_QP_MAX_QP_RD_ATOMIC);
 
 /////////////////////////////////////////////////
 
