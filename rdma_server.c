@@ -75,6 +75,7 @@ int main(){
     conn_attr.qp_state = IBV_QPS_RTR;
     conn_attr.path_mtu=IBV_MTU_4096;
     conn_attr.pkey_index = 0;
+    
     //conn_attr.dest_qp_num=  //통신 상대의 QP 번호
     //conn_attr.rq_psn        //통신 상대 SQ의 PS
     
