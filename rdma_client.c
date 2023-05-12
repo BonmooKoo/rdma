@@ -311,7 +311,7 @@ static int client_remote_memory_ops()
 	struct ibv_wc wc;
 	int ret = -1;
 	client_dst_mr = rdma_buffer_register(pd,
-			dst,
+			dst, 
 			strlen(src),
 			(IBV_ACCESS_LOCAL_WRITE | 
 			 IBV_ACCESS_REMOTE_WRITE | 
@@ -469,26 +469,10 @@ int main(int argc, char **argv) {
 	/* buffers are NULL */
 	src = dst = NULL; 
 	/* Parse Command Line Arguments */
-	while ((option = getopt(argc, argv, "s:a:p:")) != -1) {
+	while ((option = getopt(argc, argv, "a:p:")) != -1) {
+		src=calloc(4096,1);
+		dst=calloc(4096,1);
 		switch (option) {
-			case 's':
-				printf("Passed string is : %s , with count %u \n", 
-						optarg, 
-						(unsigned int) strlen(optarg));
-				src = calloc(strlen(optarg) , 1);
-				if (!src) {
-					rdma_error("Failed to allocate memory : -ENOMEM\n");
-					return -ENOMEM;
-				}
-				/* Copy the passes arguments */
-				strncpy(src, optarg, strlen(optarg));
-				dst = calloc(strlen(optarg), 1);
-				if (!dst) {
-					rdma_error("Failed to allocate destination memory, -ENOMEM\n");
-					free(src);
-					return -ENOMEM;
-				}
-				break;
 			case 'a':
 				/* remember, this overwrites the port info */
 				ret = get_addr(optarg, (struct sockaddr*) &server_sockaddr);
