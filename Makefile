@@ -15,5 +15,6 @@ rdma_server: rdma_server.o rdma_common.o
 
 rdma_client: rdma_client.o rdma_common.o
         $(CC) $(CFLAGS) rdma_client.o rdma_common.o -o rdma_client $(LIBS)
+
 clean:
         rm -rf *.o rdma_server rdma_client *~
