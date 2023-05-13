@@ -325,7 +325,7 @@ static int client_remote_memory_ops()
 	/* now we fill up SGE */
 	client_send_sge.addr = (uint64_t) client_src_mr->addr;
 	//client_send_sge.length = (uint32_t) client_src_mr->length;
-	client_send_sge.length=8
+	client_send_sge.length=8;
 	client_send_sge.lkey = client_src_mr->lkey;
 	/* now we link to the send work request */
 	bzero(&client_send_wr, sizeof(client_send_wr));
