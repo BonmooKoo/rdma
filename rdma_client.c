@@ -246,7 +246,7 @@ static int client_xchange_metadata_with_server()
 	int ret = -1;
 	client_src_mr = rdma_buffer_register(pd,
 			src,
-			strlen(src),
+			4096,
 			(IBV_ACCESS_LOCAL_WRITE|
 			 IBV_ACCESS_REMOTE_READ|
 			 IBV_ACCESS_REMOTE_WRITE));
@@ -312,7 +312,7 @@ static int client_remote_memory_ops()
 	int ret = -1;
 	client_dst_mr = rdma_buffer_register(pd,
 			dst, 
-			strlen(src),
+			4096,
 			(IBV_ACCESS_LOCAL_WRITE | 
 			 IBV_ACCESS_REMOTE_WRITE | 
 			 IBV_ACCESS_REMOTE_READ));
