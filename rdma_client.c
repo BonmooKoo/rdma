@@ -324,14 +324,14 @@ static int client_remote_memory_ops()
 	 * reuse the previous variables. */
 	/* now we fill up SGE */
 	client_send_sge.addr = (uint64_t) client_src_mr->addr;
-	//client_send_sge.length = (uint32_t) client_src_mr->length;
-	client_send_sge.length=8;
+	client_send_sge.length = (uint32_t) client_src_mr->length;
+	// client_send_sge.length=8;
 	client_send_sge.lkey = client_src_mr->lkey;
 	/* now we link to the send work request */
 	bzero(&client_send_wr, sizeof(client_send_wr));
 	client_send_wr.sg_list = &client_send_sge;
-	//client_send_wr.num_sge = 1;
-	client_send_wr.num_sge = 512; // = 4096/8
+	client_send_wr.num_sge = 1;
+	// client_send_wr.num_sge = 512; // = 4096/8
 	client_send_wr.opcode = IBV_WR_RDMA_WRITE;
 	client_send_wr.send_flags = IBV_SEND_SIGNALED;
 	
@@ -359,14 +359,14 @@ static int client_remote_memory_ops()
 	/* Now we prepare a READ using same variables but for destination */
 	//여러 sge 보내기 연습
 	client_send_sge.addr = (uint64_t) client_dst_mr->addr;
-	//client_send_sge.length = (uint32_t) client_dst_mr->length;
-	client_send_sge.length=8;
+	client_send_sge.length = (uint32_t) client_dst_mr->length;
+	// client_send_sge.length=8;
 	client_send_sge.lkey = client_dst_mr->lkey;
 	/* now we link to the send work request */
 	bzero(&client_send_wr, sizeof(client_send_wr));
 	client_send_wr.sg_list = &client_send_sge;
-	//client_send_wr.num_sge = 1;
-	client_send_wr.num_sge = 512; // =4096/8
+	client_send_wr.num_sge = 1;
+	// client_send_wr.num_sge = 512; // =4096/8
 	client_send_wr.opcode = IBV_WR_RDMA_READ;
 	client_send_wr.send_flags = IBV_SEND_SIGNALED;
 	/* we have to tell server side info for RDMA */
