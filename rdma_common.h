@@ -44,11 +44,11 @@
 #endif /* ACN_RDMA_DEBUG */
 
 /* Capacity of the completion queue (CQ) */
-#define CQ_CAPACITY (16)
+#define CQ_CAPACITY (1024)
 /* MAX SGE capacity */
-#define MAX_SGE (2)
+#define MAX_SGE (512)
 /* MAX work requests */
-#define MAX_WR (8)
+#define MAX_WR (512)
 /* Default port where the RDMA server is listening */
 #define DEFAULT_RDMA_PORT (20886)
 

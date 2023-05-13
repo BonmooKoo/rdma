@@ -30,7 +30,7 @@ static char *src = NULL, *dst = NULL;
 /* This is our testing function */
 static int check_src_dst() 
 {
-	return memcmp((void*) src, (void*) dst, strlen(src));
+	return memcmp((void*) src, (void*) dst, 4096);
 }
 
 /* This function prepares client side connection resources for an RDMA connection */
@@ -357,6 +357,7 @@ static int client_remote_memory_ops()
 	}
 	debug("Client side WRITE is complete \n");
 	/* Now we prepare a READ using same variables but for destination */
+	//여러 sge 보내기 연습
 	client_send_sge.addr = (uint64_t) client_dst_mr->addr;
 	//client_send_sge.length = (uint32_t) client_dst_mr->length;
 	client_send_sge.length=8;
