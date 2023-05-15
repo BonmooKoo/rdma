@@ -23,7 +23,7 @@ rdma_client: rdma_client.o rdma_common.o
 
 rdma512B: rdma_client_512B.o rdma_common.o
 	$(CC) $(CFLAGS) rdma_client_512B.o rdma_common.o -o rdma512B $(LIBS)
-array: rdma_array.o o rdma_common.o
+array: rdma_array.o rdma_common.o
 	$(CC) $(CFLAGS) rdma_array.o rdma_common.o -o array $(LIBS)
 
 clean:

@@ -350,6 +350,7 @@ static int write_array(int index,uint64_t value)
 	return 0;
 }	
 static int read_array(int index){
+	struct ibv_wc wc;
 	/* Now we prepare a READ using same variables but for destination */
 	//여러 sge 보내기 연습
 	client_dst_mr = rdma_buffer_register(pd,
@@ -395,6 +396,7 @@ static int read_array(int index){
 	return 0;
 }
 static int read_total_array(){
+	struct ibv_wc wc;
 	/* Now we prepare a READ using same variables but for destination */
 	//여러 sge 보내기 연습
 	client_send_sge.addr = (uint64_t) client_dst_mr->addr;
@@ -408,7 +410,7 @@ static int read_total_array(){
 	client_send_wr.send_flags = IBV_SEND_SIGNALED;
 	/* we have to tell server side info for RDMA */
 	client_send_wr.wr.rdma.rkey = server_metadata_attr.stag.remote_stag;
-	client_send_wr.wr.rdma.remote_addr = server_metadata_attr.address+8*index;
+	client_send_wr.wr.rdma.remote_addr = server_metadata_attr.address;
 	/* Now we post it */
 	int ret = ibv_post_send(client_qp, 
 			&client_send_wr,
