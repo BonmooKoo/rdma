@@ -26,13 +26,13 @@ static struct ibv_recv_wr server_recv_wr, *bad_server_recv_wr = NULL;
 static struct ibv_sge client_send_sge, server_recv_sge;
 /* Source and Destination buffers, where RDMA operations source and sink */
 static char *src = NULL, *dst = NULL; 
-
+static char* array=NULL;
 /* This is our testing function */
 static int check_src_dst() 
 {
 	printf("src : %s \n ",src);
 	printf("dst : %s \n ",dst);
-	return memcmp((void*) src, (void*) dst, 8192);
+	return memcmp((void*) src, (void*) dst, 8);
 }
 
 /* This function prepares client side connection resources for an RDMA connection */
@@ -81,12 +81,12 @@ static int client_prepare_connection(struct sockaddr_in *s_addr)
 	}
 	debug("RDMA address is resolved \n");
 
-	 /* Resolves an RDMA route to the destination address in order to 
-	  * establish a connection */
+	/* Resolves an RDMA route to the destination address in order to 
+	 * establish a connection */
 	ret = rdma_resolve_route(cm_client_id, 2000);
 	if (ret) {
 		rdma_error("Failed to resolve route, erno: %d \n", -errno);
-	       return -errno;
+		return -errno;
 	}
 	debug("waiting for cm event: RDMA_CM_EVENT_ROUTE_RESOLVED\n");
 	ret = process_rdma_cm_event(cm_event_channel, 
@@ -124,8 +124,8 @@ static int client_prepare_connection(struct sockaddr_in *s_addr)
 	io_completion_channel = ibv_create_comp_channel(cm_client_id->verbs);
 	if (!io_completion_channel) {
 		rdma_error("Failed to create IO completion event channel, errno: %d\n",
-			       -errno);
-	return -errno;
+				-errno);
+		return -errno;
 	}
 	debug("completion event channel created at : %p \n", io_completion_channel);
 	/* Now we create a completion queue (CQ) where actual I/O 
@@ -149,25 +149,25 @@ static int client_prepare_connection(struct sockaddr_in *s_addr)
 		rdma_error("Failed to request notifications, errno: %d\n", -errno);
 		return -errno;
 	}
-       /* Now the last step, set up the queue pair (send, recv) queues and their capacity.
-         * The capacity here is define statically but this can be probed from the 
+	/* Now the last step, set up the queue pair (send, recv) queues and their capacity.
+	 * The capacity here is define statically but this can be probed from the 
 	 * device. We just use a small number as defined in rdma_common.h */
-       bzero(&qp_init_attr, sizeof qp_init_attr);
-       qp_init_attr.cap.max_recv_sge = MAX_SGE; /* Maximum SGE per receive posting */
-       qp_init_attr.cap.max_recv_wr = MAX_WR; /* Maximum receive posting capacity */
-       qp_init_attr.cap.max_send_sge = MAX_SGE; /* Maximum SGE per send posting */
-       qp_init_attr.cap.max_send_wr = MAX_WR; /* Maximum send posting capacity */
-       qp_init_attr.qp_type = IBV_QPT_RC; /* QP type, RC = Reliable connection */
-       /* We use same completion queue, but one can use different queues */
-       qp_init_attr.recv_cq = client_cq; /* Where should I notify for receive completion operations */
-       qp_init_attr.send_cq = client_cq; /* Where should I notify for send completion operations */
-       /*Lets create a QP */
-       ret = rdma_create_qp(cm_client_id /* which connection id */,
-		       pd /* which protection domain*/,
-		       &qp_init_attr /* Initial attributes */);
+	bzero(&qp_init_attr, sizeof qp_init_attr);
+	qp_init_attr.cap.max_recv_sge = MAX_SGE; /* Maximum SGE per receive posting */
+	qp_init_attr.cap.max_recv_wr = MAX_WR; /* Maximum receive posting capacity */
+	qp_init_attr.cap.max_send_sge = MAX_SGE; /* Maximum SGE per send posting */
+	qp_init_attr.cap.max_send_wr = MAX_WR; /* Maximum send posting capacity */
+	qp_init_attr.qp_type = IBV_QPT_RC; /* QP type, RC = Reliable connection */
+	/* We use same completion queue, but one can use different queues */
+	qp_init_attr.recv_cq = client_cq; /* Where should I notify for receive completion operations */
+	qp_init_attr.send_cq = client_cq; /* Where should I notify for send completion operations */
+	/*Lets create a QP */
+	ret = rdma_create_qp(cm_client_id /* which connection id */,
+			pd /* which protection domain*/,
+			&qp_init_attr /* Initial attributes */);
 	if (ret) {
 		rdma_error("Failed to create QP, errno: %d \n", -errno);
-	       return -errno;
+		return -errno;
 	}
 	client_qp = cm_client_id->qp;
 	debug("QP created at %p \n", client_qp);
@@ -194,8 +194,8 @@ static int client_pre_post_recv_buffer()
 	server_recv_wr.sg_list = &server_recv_sge;
 	server_recv_wr.num_sge = 1;
 	ret = ibv_post_recv(client_qp /* which QP */,
-		      &server_recv_wr /* receive work request*/,
-		      &bad_server_recv_wr /* error WRs */);
+			&server_recv_wr /* receive work request*/,
+			&bad_server_recv_wr /* error WRs */);
 	if (ret) {
 		rdma_error("Failed to pre-post the receive buffer, errno: %d \n", ret);
 		return ret;
@@ -225,12 +225,12 @@ static int client_connect_to_server()
 			&cm_event);
 	if (ret) {
 		rdma_error("Failed to get cm event, ret = %d \n", ret);
-	       return ret;
+		return ret;
 	}
 	ret = rdma_ack_cm_event(cm_event);
 	if (ret) {
 		rdma_error("Failed to acknowledge cm event, errno: %d\n", 
-			       -errno);
+				-errno);
 		return -errno;
 	}
 	printf("The client is connected successfully \n");
@@ -248,7 +248,7 @@ static int client_xchange_metadata_with_server()
 	int ret = -1;
 	client_src_mr = rdma_buffer_register(pd,
 			src,
-			8192,
+			8,
 			(IBV_ACCESS_LOCAL_WRITE|
 			 IBV_ACCESS_REMOTE_READ|
 			 IBV_ACCESS_REMOTE_WRITE));
@@ -281,8 +281,8 @@ static int client_xchange_metadata_with_server()
 	client_send_wr.send_flags = IBV_SEND_SIGNALED;
 	/* Now we post it */
 	ret = ibv_post_send(client_qp, 
-		       &client_send_wr,
-	       &bad_client_send_wr);
+			&client_send_wr,
+			&bad_client_send_wr);
 	if (ret) {
 		rdma_error("Failed to send client metadata, errno: %d \n", 
 				-errno);
@@ -300,6 +300,7 @@ static int client_xchange_metadata_with_server()
 	}
 	debug("Server sent us its buffer location and credentials, showing \n");
 	show_rdma_buffer_attr(&server_metadata_attr);
+	array=(char*)server_metadata_attr->addr;
 	return 0;
 }
 
@@ -308,13 +309,13 @@ static int client_xchange_metadata_with_server()
  * 1) RDMA write from src -> remote buffer 
  * 2) RDMA read from remote bufer -> dst
  */ 
-static int client_remote_memory_ops() 
+static int write_array(int index,uint64_t value) 
 {
 	struct ibv_wc wc;
 	int ret = -1;
 	client_dst_mr = rdma_buffer_register(pd,
 			dst, 
-			8192,
+			8,
 			(IBV_ACCESS_LOCAL_WRITE | 
 			 IBV_ACCESS_REMOTE_WRITE | 
 			 IBV_ACCESS_REMOTE_READ));
@@ -333,17 +334,17 @@ static int client_remote_memory_ops()
 	bzero(&client_send_wr, sizeof(client_send_wr));
 	client_send_wr.sg_list = &client_send_sge;
 	client_send_wr.num_sge = 1;
-	// client_send_wr.num_sge = 512; // = 4096/8
+	// client_send_wr.num_sge = 512; // = 8/8
 	client_send_wr.opcode = IBV_WR_RDMA_WRITE;
 	client_send_wr.send_flags = IBV_SEND_SIGNALED;
-	
+
 	/* we have to tell server side info for RDMA */
 	client_send_wr.wr.rdma.rkey = server_metadata_attr.stag.remote_stag;
 	client_send_wr.wr.rdma.remote_addr = server_metadata_attr.address;
 	/* Now we post it */
 	ret = ibv_post_send(client_qp, 
-		       &client_send_wr,
-	       &bad_client_send_wr);
+			&client_send_wr,
+			&bad_client_send_wr);
 	if (ret) {
 		rdma_error("Failed to write client src buffer, errno: %d \n", 
 				-errno);
@@ -358,6 +359,8 @@ static int client_remote_memory_ops()
 		return ret;
 	}
 	debug("Client side WRITE is complete \n");
+}	
+static int read_array(){
 	/* Now we prepare a READ using same variables but for destination */
 	//여러 sge 보내기 연습
 	client_send_sge.addr = (uint64_t) client_dst_mr->addr;
@@ -368,7 +371,7 @@ static int client_remote_memory_ops()
 	bzero(&client_send_wr, sizeof(client_send_wr));
 	client_send_wr.sg_list = &client_send_sge;
 	client_send_wr.num_sge = 1;
-	// client_send_wr.num_sge = 512; // =4096/8
+	// client_send_wr.num_sge = 512; // =8/8
 	client_send_wr.opcode = IBV_WR_RDMA_READ;
 	client_send_wr.send_flags = IBV_SEND_SIGNALED;
 	/* we have to tell server side info for RDMA */
@@ -376,8 +379,8 @@ static int client_remote_memory_ops()
 	client_send_wr.wr.rdma.remote_addr = server_metadata_attr.address;
 	/* Now we post it */
 	ret = ibv_post_send(client_qp, 
-		       &client_send_wr,
-	       &bad_client_send_wr);
+			&client_send_wr,
+			&bad_client_send_wr);
 	if (ret) {
 		rdma_error("Failed to read client dst buffer from the master, errno: %d \n", 
 				-errno);
@@ -419,7 +422,7 @@ static int client_disconnect_and_clean()
 	ret = rdma_ack_cm_event(cm_event);
 	if (ret) {
 		rdma_error("Failed to acknowledge cm event, errno: %d\n", 
-			       -errno);
+				-errno);
 		//continuing anyways
 	}
 	/* Destroy QP */
@@ -478,9 +481,8 @@ int main(int argc, char **argv) {
 	src = dst = NULL; 
 	/* Parse Command Line Arguments */
 	while ((option = getopt(argc, argv, "a:p:")) != -1) {
-		src=calloc(8192,1);
-		memset(src,5,8192);
-		dst=calloc(8192,1);
+		src=calloc(4096,1);
+		dst=calloc(4096,1);
 		switch (option) {
 			case 'a':
 				/* remember, this overwrites the port info */
@@ -497,21 +499,21 @@ int main(int argc, char **argv) {
 			default:
 				usage();
 				break;
-			}
 		}
+	}
 	if (!server_sockaddr.sin_port) {
-	  /* no port provided, use the default port */
-	  server_sockaddr.sin_port = htons(DEFAULT_RDMA_PORT);
-	  }
+		/* no port provided, use the default port */
+		server_sockaddr.sin_port = htons(DEFAULT_RDMA_PORT);
+	}
 	if (src == NULL) {
 		printf("Please provide a string to copy \n");
 		usage();
-       	}
+	}
 	ret = client_prepare_connection(&server_sockaddr);
 	if (ret) { 
 		rdma_error("Failed to setup client connection , ret = %d \n", ret);
 		return ret;
-	 }
+	}
 	ret = client_pre_post_recv_buffer(); 
 	if (ret) { 
 		rdma_error("Failed to setup client connection , ret = %d \n", ret);
@@ -522,21 +524,20 @@ int main(int argc, char **argv) {
 		rdma_error("Failed to setup client connection , ret = %d \n", ret);
 		return ret;
 	}
+	
+	write_array(1,1);
+
+	read_array(1);
+	read_total_array(1);
+	
+	
+	
 	ret = client_xchange_metadata_with_server();
 	if (ret) {
 		rdma_error("Failed to setup client connection , ret = %d \n", ret);
 		return ret;
 	}
 	ret = client_remote_memory_ops();
-	if (ret) {
-		rdma_error("Failed to finish remote memory ops, ret = %d \n", ret);
-		return ret;
-	}
-	if (check_src_dst()) {
-		rdma_error("src and dst buffers do not match \n");
-	} else {
-		printf("...\nSUCCESS, source and destination buffers match \n");
-	}
 	ret = client_disconnect_and_clean();
 	if (ret) {
 		rdma_error("Failed to cleanly disconnect and clean up resources \n");
