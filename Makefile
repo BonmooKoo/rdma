@@ -11,6 +11,10 @@ rdma_common.o: rdma_common.c
 	$(CC) $(CFLAGS) -c rdma_common.c
 rdma_client_512B.o:rdma_client_512B.c
 	$(CC) $(CFLAGS) -c rdma_client_512B.c
+rdma_array.o:rdma_array.c
+	$(CC) $(CFLAGS) -c rdma_array.c
+
+
 rdma_server: rdma_server.o rdma_common.o
 	$(CC) $(CFLAGS) rdma_server.o rdma_common.o -o rdma_server $(LIBS)
 
@@ -19,5 +23,8 @@ rdma_client: rdma_client.o rdma_common.o
 
 rdma512B: rdma_client_512B.o rdma_common.o
 	$(CC) $(CFLAGS) rdma_client_512B.o rdma_common.o -o rdma512B $(LIBS)
+array: rdma_array.o o rdma_common.o
+	$(CC) $(CFLAGS) rdma_array.o rdma_common.o -o array $(LIBS)
+
 clean:
 	rm -rf *.o rdma_server rdma_client *~
