@@ -281,8 +281,8 @@ static int client_xchange_metadata_with_server()
 	client_send_wr.send_flags = IBV_SEND_SIGNALED;
 	/* Now we post it */
 	ret = ibv_post_send(client_qp, 
-			&client_send_wr,
-			&bad_client_send_wr);
+		       &client_send_wr,
+	       &bad_client_send_wr);
 	if (ret) {
 		rdma_error("Failed to send client metadata, errno: %d \n", 
 				-errno);
@@ -300,7 +300,6 @@ static int client_xchange_metadata_with_server()
 	}
 	debug("Server sent us its buffer location and credentials, showing \n");
 	show_rdma_buffer_attr(&server_metadata_attr);
-	array=(char*)server_metadata_attr->addr;
 	return 0;
 }
 
@@ -376,7 +375,7 @@ static int read_array(int index){
 	client_send_wr.wr.rdma.rkey = server_metadata_attr.stag.remote_stag;
 	client_send_wr.wr.rdma.remote_addr = server_metadata_attr.address+8*index;
 	/* Now we post it */
-	ret = ibv_post_send(client_qp, 
+	int ret = ibv_post_send(client_qp, 
 			&client_send_wr,
 			&bad_client_send_wr);
 	if (ret) {
@@ -411,7 +410,7 @@ static int read_total_array(){
 	client_send_wr.wr.rdma.rkey = server_metadata_attr.stag.remote_stag;
 	client_send_wr.wr.rdma.remote_addr = server_metadata_attr.address+8*index;
 	/* Now we post it */
-	ret = ibv_post_send(client_qp, 
+	int ret = ibv_post_send(client_qp, 
 			&client_send_wr,
 			&bad_client_send_wr);
 	if (ret) {
