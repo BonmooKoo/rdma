@@ -316,7 +316,8 @@ static int write_array(int index,uint64_t value)
 	/* Step 1: is to copy the local buffer into the remote buffer. We will 
 	 * reuse the previous variables. */
 	/* now we fill up SGE */
-	client_send_sge.addr = (uint64_t)(&index);
+	memncpy(client_src_mr->addr,&index,8);
+	client_send_sge.addr = (uint64_t) client_src_mr->addr;
 	client_send_sge.length=8;
 	client_send_sge.lkey = client_src_mr->lkey;
 	/* now we link to the send work request */
@@ -355,7 +356,7 @@ static int read_array(int index){
 	//여러 sge 보내기 연습
 	client_dst_mr = rdma_buffer_register(pd,
 			dst, 
-			8,
+			4096,
 			(IBV_ACCESS_LOCAL_WRITE | 
 			 IBV_ACCESS_REMOTE_WRITE | 
 			 IBV_ACCESS_REMOTE_READ));
