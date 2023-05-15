@@ -313,7 +313,7 @@ static int write_array(int index,uint64_t value)
 {
 	struct ibv_wc wc;
 	int ret = -1;
-	
+
 	/* Step 1: is to copy the local buffer into the remote buffer. We will 
 	 * reuse the previous variables. */
 	/* now we fill up SGE */
@@ -354,7 +354,7 @@ static int read_array(int index){
 	/* Now we prepare a READ using same variables but for destination */
 	//여러 sge 보내기 연습
 	client_dst_mr = rdma_buffer_register(pd,
-			(char*)value, 
+			dst, 
 			8,
 			(IBV_ACCESS_LOCAL_WRITE | 
 			 IBV_ACCESS_REMOTE_WRITE | 
@@ -408,7 +408,7 @@ static int read_total_array(){
 	client_send_wr.opcode = IBV_WR_RDMA_READ;
 	client_send_wr.send_flags = IBV_SEND_SIGNALED;
 	/* we have to tell server side info for RDMA */
-	client_send_wr.wr.rdma.rkey = server_metadata_attr.stag.remote_stag+;
+	client_send_wr.wr.rdma.rkey = server_metadata_attr.stag.remote_stag;
 	client_send_wr.wr.rdma.remote_addr = server_metadata_attr.address+8*index;
 	/* Now we post it */
 	ret = ibv_post_send(client_qp, 
@@ -565,15 +565,6 @@ int main(int argc, char **argv) {
 	read_array(1);
 	printf("dst : %s\n",dst);
 	//read_total_array(1);
-	
-	
-	
-	ret = client_xchange_metadata_with_server();
-	if (ret) {
-		rdma_error("Failed to setup client connection , ret = %d \n", ret);
-		return ret;
-	}
-	ret = client_remote_memory_ops();
 	ret = client_disconnect_and_clean();
 	if (ret) {
 		rdma_error("Failed to cleanly disconnect and clean up resources \n");
