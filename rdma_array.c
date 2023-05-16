@@ -314,7 +314,8 @@ static int write_array(int index,uint64_t value)
 	/* Step 1: is to copy the local buffer into the remote buffer. We will 
 	 * reuse the previous variables. */
 	/* now we fill up SGE */
-	memcpy(client_src_mr->addr,&index,8);
+	memcpy(client_src_mr->addr,&value,8);
+	printf("src: %lu val : %lu\n", *((uint64_t*)((void*)client_src_mr->addr)), value);
 	client_send_sge.addr = (uint64_t) client_src_mr->addr;
 	client_send_sge.length=8;
 	client_send_sge.lkey = client_src_mr->lkey;
@@ -354,7 +355,7 @@ static int read_array(int index){
 	//여러 sge 보내기 연습
 	client_dst_mr = rdma_buffer_register(pd,
 			dst, 
-			4096,
+			8,
 			(IBV_ACCESS_LOCAL_WRITE | 
 			 IBV_ACCESS_REMOTE_WRITE | 
 			 IBV_ACCESS_REMOTE_READ));
@@ -392,6 +393,8 @@ static int read_array(int index){
 		return ret;
 	}
 	debug("Client side READ is complete \n");
+	printf("dst : %lu\n",*(uint64_t*)((void*)dst));
+	
 	return 0;
 }
 static int read_total_array(){
@@ -428,6 +431,11 @@ static int read_total_array(){
 		return ret;
 	}
 	debug("Client side READ is complete \n");
+	
+	for(int i=0;i<64;i++){
+		printf("dst : %lu\n",*(uint64_t*)((void*)dst+i*8));
+	}
+	
 	return 0;
 }
 /* This function disconnects the RDMA connection from the server and cleans up 
@@ -561,10 +569,13 @@ int main(int argc, char **argv) {
 		rdma_error("Failed to setup client connection , ret = %d \n", ret);
 		return ret;
 	}
-	write_array(1,1);
+	write_array(1,100);
+	write_array(0,200);
+	write_array(2,300);
+	read_array(0);
 	read_array(1);
-	printf("dst : %s\n",dst);
-	//read_total_array(1);
+	read_array(2);
+	read_total_array();
 	ret = client_disconnect_and_clean();
 	if (ret) {
 		rdma_error("Failed to cleanly disconnect and clean up resources \n");
