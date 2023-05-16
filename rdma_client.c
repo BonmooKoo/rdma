@@ -32,7 +32,7 @@ static int check_src_dst()
 {
 	printf("src : %s \n ",src);
 	printf("dst : %s \n ",dst);
-	return memcmp((void*) src, (void*) dst, 8192);
+	return memcmp((void*) src, (void*) dst, 1024);
 }
 
 /* This function prepares client side connection resources for an RDMA connection */
@@ -248,7 +248,7 @@ static int client_xchange_metadata_with_server()
 	int ret = -1;
 	client_src_mr = rdma_buffer_register(pd,
 			src,
-			8192,
+			1024,
 			(IBV_ACCESS_LOCAL_WRITE|
 			 IBV_ACCESS_REMOTE_READ|
 			 IBV_ACCESS_REMOTE_WRITE));
@@ -310,11 +310,12 @@ static int client_xchange_metadata_with_server()
  */ 
 static int client_remote_memory_ops() 
 {
+	struct timespec t1,t2;
 	struct ibv_wc wc;
 	int ret = -1;
 	client_dst_mr = rdma_buffer_register(pd,
 			dst, 
-			8192,
+			1024,
 			(IBV_ACCESS_LOCAL_WRITE | 
 			 IBV_ACCESS_REMOTE_WRITE | 
 			 IBV_ACCESS_REMOTE_READ));
@@ -333,7 +334,7 @@ static int client_remote_memory_ops()
 	bzero(&client_send_wr, sizeof(client_send_wr));
 	client_send_wr.sg_list = &client_send_sge;
 	client_send_wr.num_sge = 1;
-	// client_send_wr.num_sge = 512; // = 4096/8
+	// client_send_wr.num_sge = 512; // = 1024/8
 	client_send_wr.opcode = IBV_WR_RDMA_WRITE;
 	client_send_wr.send_flags = IBV_SEND_SIGNALED;
 	
@@ -368,13 +369,14 @@ static int client_remote_memory_ops()
 	bzero(&client_send_wr, sizeof(client_send_wr));
 	client_send_wr.sg_list = &client_send_sge;
 	client_send_wr.num_sge = 1;
-	// client_send_wr.num_sge = 512; // =4096/8
+	// client_send_wr.num_sge = 512; // =1024/8
 	client_send_wr.opcode = IBV_WR_RDMA_READ;
 	client_send_wr.send_flags = IBV_SEND_SIGNALED;
 	/* we have to tell server side info for RDMA */
 	client_send_wr.wr.rdma.rkey = server_metadata_attr.stag.remote_stag;
 	client_send_wr.wr.rdma.remote_addr = server_metadata_attr.address;
 	/* Now we post it */
+	clock_gettime(CLOCK_REALTIME,&t1);
 	ret = ibv_post_send(client_qp, 
 		       &client_send_wr,
 	       &bad_client_send_wr);
@@ -391,6 +393,8 @@ static int client_remote_memory_ops()
 				ret);
 		return ret;
 	}
+	clock_gettime(CLOCK_REALTIME,&t2);
+	printf("%lu nsec\n",(t2.tv_sec-t1.tv_sec)*1000000000UL+t2.tv_nsec-t1.tv_nsec);
 	debug("Client side READ is complete \n");
 	return 0;
 }
@@ -478,9 +482,9 @@ int main(int argc, char **argv) {
 	src = dst = NULL; 
 	/* Parse Command Line Arguments */
 	while ((option = getopt(argc, argv, "a:p:")) != -1) {
-		src=calloc(8192,1);
-		memset(src,5,8192);
-		dst=calloc(8192,1);
+		src=calloc(1024,1);
+		memset(src,5,1024);
+		dst=calloc(1024,1);
 		switch (option) {
 			case 'a':
 				/* remember, this overwrites the port info */

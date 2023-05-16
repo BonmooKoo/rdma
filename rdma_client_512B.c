@@ -327,7 +327,6 @@ static int client_remote_memory_ops()
 	/* now we fill up SGE */
 	int time=64;//=4096/64 ( cacheline size )
 	for(int i=0;i<time;i++){
-		printf("%d\n",i);
 		client_send_sge.addr = (uint64_t) client_src_mr->addr+64*i;
 		client_send_sge.length=64;
 		client_send_sge.lkey = client_src_mr->lkey;
@@ -342,6 +341,8 @@ static int client_remote_memory_ops()
 		client_send_wr.wr.rdma.rkey = server_metadata_attr.stag.remote_stag;
 		client_send_wr.wr.rdma.remote_addr = server_metadata_attr.address+64*i;
 		/* Now we post it */
+		struct timespec t1,t2;
+                clock_gettime(CLOCK_REALTIME,&t1);
 		ret = ibv_post_send(client_qp, 
 				&client_send_wr,
 				&bad_client_send_wr);
@@ -360,7 +361,8 @@ static int client_remote_memory_ops()
 						ret);
 				return ret;
 			}
-		//}
+		clock_gettime(CLOCK_REALTIME,&t2);
+                printf("%lu nsec\n",(t2.tv_sec-t1.tv_sec)*1000000000UL+t2.tv_nsec-t1.tv_nsec);//}
 	}
 
 	debug("Client side WRITE is complete \n");
@@ -537,9 +539,9 @@ int main(int argc, char **argv) {
 		return ret;
 	}
 	struct timespec t1,t2;
-	clock_gettime(CLOCK_REALTIME,&t2);
-	ret = client_remote_memory_ops();
 	clock_gettime(CLOCK_REALTIME,&t1);
+	ret = client_remote_memory_ops();
+	clock_gettime(CLOCK_REALTIME,&t2);
 	printf("%lu nsec\n",(t2.tv_sec-t1.tv_sec)*1000000000UL+t2.tv_nsec-t1.tv_nsec);
 	if (ret) {
 		return ret;
