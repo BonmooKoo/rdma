@@ -1,0 +1,4 @@
+*.o
+array
+rdma512B
+*~
