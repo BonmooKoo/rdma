@@ -488,7 +488,7 @@ int main(int argc, char **argv) {
 	/* Parse Command Line Arguments */
 	while ((option = getopt(argc, argv, "a:p:")) != -1) {
 		src=calloc(4096,1);
-		memset(src,5,4096);
+		memset(src,42,4096);
 		dst=calloc(4096,1);
 		switch (option) {
 			case 'a':

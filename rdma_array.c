@@ -25,9 +25,7 @@ static struct ibv_send_wr client_send_wr, *bad_client_send_wr = NULL;
 static struct ibv_recv_wr server_recv_wr, *bad_server_recv_wr = NULL;
 static struct ibv_sge client_send_sge, server_recv_sge;
 /* Source and Destination buffers, where RDMA operations source and sink */
-static char *src = NULL, *dst = NULL; 
-static uint64_t* array=NULL;
-/* This is our testing function */
+static char *src = NULL, *dst = NULL;
 static int check_src_dst() 
 {
 	printf("src : %s \n ",src);
@@ -316,7 +314,7 @@ static int write_array(int index,uint64_t value)
 	/* Step 1: is to copy the local buffer into the remote buffer. We will 
 	 * reuse the previous variables. */
 	/* now we fill up SGE */
-	memncpy(client_src_mr->addr,&index,8);
+	memcpy(client_src_mr->addr,&index,8);
 	client_send_sge.addr = (uint64_t) client_src_mr->addr;
 	client_send_sge.length=8;
 	client_send_sge.lkey = client_src_mr->lkey;

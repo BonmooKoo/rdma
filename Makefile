@@ -28,3 +28,4 @@ array: rdma_array.o rdma_common.o
 
 clean:
 	rm -rf *.o rdma_server rdma_client *~
+	rm -rf array rdma512B
