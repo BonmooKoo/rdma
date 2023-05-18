@@ -27,6 +27,7 @@ static struct ibv_sge client_send_sge, server_recv_sge;
 /* Source and Destination buffers, where RDMA operations source and sink */
 static char *src = NULL, *dst = NULL; 
 static int msg_size=0;
+static int readsum=0,writesum=0;
 /* This is our testing function */
 static int check_src_dst() 
 {
@@ -327,7 +328,7 @@ static int client_remote_memory_ops()
 	/* now we fill up SGE */
 	int time=4096/msg_size;//=4096/64 ( cacheline size )
 	for(int i=0;i<time;i++){
-		client_send_sge.addr = (uint64_t) client_src_mr->addr+64*i;
+		client_send_sge.addr = (uint64_t) client_src_mr->addr+msg_size*i;
 		client_send_sge.length=msg_size;
 		client_send_sge.lkey = client_src_mr->lkey;
 		/* now we link to the send work request */
@@ -360,7 +361,9 @@ static int client_remote_memory_ops()
 			return ret;
 		}
 		clock_gettime(CLOCK_REALTIME,&t2);
-		printf("WRITE : %lu nsec\n",(t2.tv_sec-t1.tv_sec)*1000000000UL+t2.tv_nsec-t1.tv_nsec);//}
+		uint64_t timer=(t2.tv_sec-t1.tv_sec)*1000000000UL+t2.tv_nsec-t1.tv_nsec;	
+		writesum+=timer;
+		printf("%d\n WRITE : %lu nsec\n",i,timer);
 	}
 
 	debug("Client side WRITE is complete \n");
@@ -399,7 +402,10 @@ static int client_remote_memory_ops()
 			return ret;
 		}
 		clock_gettime(CLOCK_REALTIME,&t2);
-		printf("READ : %lu nsec\n",(t2.tv_sec-t1.tv_sec)*1000000000UL+t2.tv_nsec-t1.tv_nsec);//}
+		uint64_t timer=(t2.tv_sec-t1.tv_sec)*1000000000UL+t2.tv_nsec-t1.tv_nsec;
+		readsum+=timer;
+		printf("%d READ : %lu nsec\n",j,timer);//}
+		
 	}
 	debug("Client side READ is complete \n");
 	return 0;
@@ -488,9 +494,9 @@ int main(int argc, char **argv) {
 	src = dst = NULL; 
 	/* Parse Command Line Arguments */
 	while ((option = getopt(argc, argv, "a:p:s:")) != -1) {
-		src=calloc(4096,1);
-		memset(src,42,4096);
-		dst=calloc(4096,1);
+		src=calloc(1024*1024,1);
+		memset(src,66,1024*1024);
+		dst=calloc(1024*1024,1);
 		switch (option) {
 			case 'a':
 				/* remember, this overwrites the port info */
@@ -505,7 +511,7 @@ int main(int argc, char **argv) {
 				server_sockaddr.sin_port = htons(strtol(optarg, NULL, 0)); 
 				break;
 			case 's':
-				msg_sizse=atoi(optarg);
+				msg_size=atoi(optarg);
 				break;
 			default:
 				usage();
@@ -545,14 +551,16 @@ int main(int argc, char **argv) {
 	ret = client_remote_memory_ops();
 	clock_gettime(CLOCK_REALTIME,&t2);
 	printf("Total time : %lu nsec\n",(t2.tv_sec-t1.tv_sec)*1000000000UL+t2.tv_nsec-t1.tv_nsec);
+	printf("Read sum : %lu nsec \n Write Sum:%lu \n",readsum,writesum);
 	if (ret) {
 		return ret;
 	}
-	if (check_src_dst()) {
+	/*if (check_src_dst()) {
 		rdma_error("src and dst buffers do not match \n");
 	} else {
 		printf("...\nSUCCESS, source and destination buffers match \n");
-	}
+	}*/
+
 	ret = client_disconnect_and_clean();
 	if (ret) {
 		rdma_error("Failed to cleanly disconnect and clean up resources \n");

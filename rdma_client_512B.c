@@ -32,7 +32,7 @@ static int check_src_dst()
 {
 	printf("src : %s \n ",src);
 	printf("dst : %s \n ",dst);
-	return memcmp((void*) src, (void*) dst, 4096);
+	return memcmp((void*) src, (void*) dst, 1024);
 }
 
 /* This function prepares client side connection resources for an RDMA connection */
@@ -248,7 +248,7 @@ static int client_xchange_metadata_with_server()
 	int ret = -1;
 	client_src_mr = rdma_buffer_register(pd,
 			src,
-			4096,
+			1024,
 			(IBV_ACCESS_LOCAL_WRITE|
 			 IBV_ACCESS_REMOTE_READ|
 			 IBV_ACCESS_REMOTE_WRITE));
@@ -314,7 +314,7 @@ static int client_remote_memory_ops()
 	int ret = -1;
 	client_dst_mr = rdma_buffer_register(pd,
 			dst, 
-			4096,
+			1024,
 			(IBV_ACCESS_LOCAL_WRITE | 
 			 IBV_ACCESS_REMOTE_WRITE | 
 			 IBV_ACCESS_REMOTE_READ));
@@ -325,7 +325,7 @@ static int client_remote_memory_ops()
 	/* Step 1: is to copy the local buffer into the remote buffer. We will 
 	 * reuse the previous variables. */
 	/* now we fill up SGE */
-	int time=64;//=4096/64 ( cacheline size )
+	int time=64;//=1024/64 ( cacheline size )
 	for(int i=0;i<time;i++){
 		client_send_sge.addr = (uint64_t) client_src_mr->addr+64*i;
 		client_send_sge.length=64;
@@ -489,9 +489,9 @@ int main(int argc, char **argv) {
 	src = dst = NULL; 
 	/* Parse Command Line Arguments */
 	while ((option = getopt(argc, argv, "a:p:")) != -1) {
-		src=calloc(4096,1);
-		memset(src,42,4096);
-		dst=calloc(4096,1);
+		src=calloc(1024,1);
+		memset(src,42,1024);
+		dst=calloc(1024,1);
 		switch (option) {
 			case 'a':
 				/* remember, this overwrites the port info */

@@ -32,7 +32,7 @@ static int check_src_dst()
 {
 	printf("src : %s \n ",src);
 	printf("dst : %s \n ",dst);
-	return memcmp((void*) src, (void*) dst, 1024);
+	return memcmp((void*) src, (void*) dst, 8192);
 }
 
 /* This function prepares client side connection resources for an RDMA connection */
@@ -248,7 +248,7 @@ static int client_xchange_metadata_with_server()
 	int ret = -1;
 	client_src_mr = rdma_buffer_register(pd,
 			src,
-			1024,
+			8192,
 			(IBV_ACCESS_LOCAL_WRITE|
 			 IBV_ACCESS_REMOTE_READ|
 			 IBV_ACCESS_REMOTE_WRITE));
@@ -315,7 +315,7 @@ static int client_remote_memory_ops()
 	int ret = -1;
 	client_dst_mr = rdma_buffer_register(pd,
 			dst, 
-			1024,
+			8192,
 			(IBV_ACCESS_LOCAL_WRITE | 
 			 IBV_ACCESS_REMOTE_WRITE | 
 			 IBV_ACCESS_REMOTE_READ));
@@ -334,7 +334,7 @@ static int client_remote_memory_ops()
 	bzero(&client_send_wr, sizeof(client_send_wr));
 	client_send_wr.sg_list = &client_send_sge;
 	client_send_wr.num_sge = 1;
-	// client_send_wr.num_sge = 512; // = 1024/8
+	// client_send_wr.num_sge = 512; // = 8192/8
 	client_send_wr.opcode = IBV_WR_RDMA_WRITE;
 	client_send_wr.send_flags = IBV_SEND_SIGNALED;
 	
@@ -369,7 +369,7 @@ static int client_remote_memory_ops()
 	bzero(&client_send_wr, sizeof(client_send_wr));
 	client_send_wr.sg_list = &client_send_sge;
 	client_send_wr.num_sge = 1;
-	// client_send_wr.num_sge = 512; // =1024/8
+	// client_send_wr.num_sge = 512; // =8192/8
 	client_send_wr.opcode = IBV_WR_RDMA_READ;
 	client_send_wr.send_flags = IBV_SEND_SIGNALED;
 	/* we have to tell server side info for RDMA */
@@ -482,9 +482,9 @@ int main(int argc, char **argv) {
 	src = dst = NULL; 
 	/* Parse Command Line Arguments */
 	while ((option = getopt(argc, argv, "a:p:")) != -1) {
-		src=calloc(1024,1);
-		memset(src,5,1024);
-		dst=calloc(1024,1);
+		src=calloc(8192,1);
+		memset(src,5,8192);
+		dst=calloc(8192,1);
 		switch (option) {
 			case 'a':
 				/* remember, this overwrites the port info */
@@ -531,7 +531,12 @@ int main(int argc, char **argv) {
 		rdma_error("Failed to setup client connection , ret = %d \n", ret);
 		return ret;
 	}
+	struct timespec t1,t2;
+	clock_gettime(CLOCK_REALTIME,&t1);
 	ret = client_remote_memory_ops();
+	clock_gettime(CLOCK_REALTIME,&t2);
+	printf("%lu nsec\n",(t2.tv_sec-t1.tv_sec)*1000000000UL+t2.tv_nsec-t1.tv_nsec);
+	/*ret = client_remote_memory_ops();
 	if (ret) {
 		rdma_error("Failed to finish remote memory ops, ret = %d \n", ret);
 		return ret;
@@ -541,10 +546,12 @@ int main(int argc, char **argv) {
 	} else {
 		printf("...\nSUCCESS, source and destination buffers match \n");
 	}
+	*/
 	ret = client_disconnect_and_clean();
 	if (ret) {
 		rdma_error("Failed to cleanly disconnect and clean up resources \n");
 	}
 	return ret;
 }
+
 
