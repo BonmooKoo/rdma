@@ -50,7 +50,7 @@
 /* MAX work requests */
 #define MAX_WR (32)
 /* Default port where the RDMA server is listening */
-#define DEFAULT_RDMA_PORT (20886)
+#define DEFAULT_RDMA_PORT (8888)
 
 /* 
  * We use attribute so that compiler does not step in and try to pad the structure.
