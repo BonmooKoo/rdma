@@ -453,13 +453,16 @@ static int lookup_linkedlist(int value){
 	curr=head+8;
 	while(1){
 		rdma_read(curr,16);
-		if(memcmp(dst+8,&value,8)>0){//if dst.value>value
+		if(memcmp(dst+8,&value,8)==0){
+			return *(int)(dst+8);//there is value
+		}
+		else if(memcmp(dst+8,&value,8)>0){//if dst.value>value
 			return -1; //there is no value;
 		}else{
 			prev=curr;
 			curr=curr+16;
 			if(curr==tail){
-				break;
+				return -1; // there is no value;
 			}
 		}
 	}
